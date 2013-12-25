@@ -184,6 +184,37 @@ VGImage createImageFromJpeg(const char *filename) {
 	return img;
 }
 
+VGImage createImageFromRaw(int w, int h, char * filename) {
+	FILE  *fp = fopen(filename, "rb");
+
+	if (!fp) {
+		printf("File %s not found.\n", filename);
+    }
+
+	VGubyte *sourceImage;
+	long int imageSize;
+
+	fseek(fp, 0L, SEEK_END);
+    imageSize = ftell(fp);
+    fseek(fp, 0L, SEEK_SET);
+
+	sourceImage = (VGubyte *)malloc(imageSize);
+	assert(sourceImage != NULL);
+
+	long int nrbytes = fread(sourceImage, 1, imageSize, fp);
+	assert(nrbytes == imageSize);
+
+	unsigned int dstride = w * 4;
+	VGImageFormat rgbaFormat = VG_sABGR_8888;
+	VGImage img = vgCreateImage(rgbaFormat, w, h, VG_IMAGE_QUALITY_BETTER);
+	vgImageSubData(img, (void *)sourceImage, dstride, rgbaFormat, 0, 0, w, h);
+	
+	fclose(fp);
+	free(sourceImage);
+
+	return img;
+}
+
 // makeimage makes an image from a raw raster of red, green, blue, alpha values
 void makeimage(VGfloat x, VGfloat y, int w, int h, VGubyte * data) {
 	unsigned int dstride = w * 4;
@@ -200,6 +231,18 @@ void Image(VGfloat x, VGfloat y, int w, int h, char *filename) {
 	vgSetPixels(x, y, img, 0, 0, w, h);
 	vgDestroyImage(img);
 }
+
+// Image places an image at the specified location, using an image previously loaded
+void ImageI(VGfloat x, VGfloat y, int w, int h, VGImage img) {
+	vgSetPixels(x,y,img,0,0,w,h);
+}
+
+//void ImageIScale(VGfloat x, VGfloat y, int w, int h, VGImage img) {
+//	vgLoadIdentity();
+//	vgTranslate(306.0f - (float)(160 / 2), 396.0f - (float)(160 / 2));
+//	vgSeti(VG_MATRIX_MODE, VG_MATRIX_IMAGE_USER_TO_SURFACE);
+//
+//}
 
 // dumpscreen writes the raster
 void dumpscreen(int w, int h, FILE * fp) {
@@ -382,6 +425,37 @@ void FillRadialGradient(VGfloat cx, VGfloat cy, VGfloat fx, VGfloat fy, VGfloat 
 	vgDestroyPaint(paint);	
 }
 
+void TextWrap(VGfloat x, VGfloat y, char *s, int width, Fontinfo f, int pointsize) {
+	VGfloat size = (VGfloat) pointsize, xx = x, yy = y, mm[9];
+	int i;
+
+	vgGetMatrix(mm);
+	for (i = 0; i < (int)strlen(s); i++) {
+		unsigned int character = (unsigned int)s[i];
+		int glyph = f.CharacterMap[character];
+		if (glyph == -1) {
+			continue;	//glyph is undefined
+		}
+
+		VGfloat mat[9] = {
+			size, 0.0f, 0.0f,
+			0.0f, size, 0.0f,
+			xx, yy, 1.0f
+		};
+		vgLoadMatrix(mm);
+		vgMultMatrix(mat);
+		vgDrawPath(f.Glyphs[glyph], VG_FILL_PATH);
+		xx += size * f.GlyphAdvances[glyph] / 65536.0f;
+
+		if(xx >= x + width) // letter wrapping
+		{
+			xx = x;
+			yy -= size + 0.2 * size; // 0.1 padding
+		}
+	}
+	vgLoadMatrix(mm);
+}
+
 // Text renders a string of text at a specified location, size, using the specified font glyphs
 // derived from http://web.archive.org/web/20070808195131/http://developer.hybrid.fi/font2openvg/renderFont.cpp.txt
 void Text(VGfloat x, VGfloat y, char *s, Fontinfo f, int pointsize) {
@@ -554,7 +628,13 @@ void Start(int width, int height) {
 
 // End checks for errors, and renders to the display
 void End() {
-	assert(vgGetError() == VG_NO_ERROR);
+	int vgerr = vgGetError();
+	if(vgerr != VG_NO_ERROR) {
+//		printf("VG error: %d", (int)vgerr);
+		printf("vgError detected: 0x%08x.\n", vgerr);
+	}
+
+	//assert(vgGetError() == VG_NO_ERROR);
 	eglSwapBuffers(state->display, state->surface);
 	assert(eglGetError() == EGL_SUCCESS);
 }
@@ -562,7 +642,13 @@ void End() {
 // SaveEnd dumps the raster before rendering to the display 
 void SaveEnd(char *filename) {
 	FILE *fp;
-	assert(vgGetError() == VG_NO_ERROR);
+	int vgError = vgGetError();
+	if(vgError != VG_NO_ERROR) {
+
+	   printf("VG error at save end: "  + vgError);
+
+	}
+//	assert(vgGetError() == VG_NO_ERROR);
 	if (strlen(filename) == 0) {
 		dumpscreen(state->screen_width, state->screen_height, stdout);
 	} else {

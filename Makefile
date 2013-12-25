@@ -4,6 +4,8 @@ all:	libshapes.o oglinit.o gopenvg
 
 libshapes.o:	libshapes.c shapes.h fontinfo.h oglinit.o
 	gcc -O2  -Wall $(LIBFLAGS) -c libshapes.c
+	cp libshapes.o ../OpenVGRenderer/OpenVGRenderer/lib/
+
 gopenvg:	openvg.go
 	go install .
 

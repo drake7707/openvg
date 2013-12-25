@@ -3,6 +3,9 @@ extern void Rotate(VGfloat);
 extern void Shear(VGfloat, VGfloat);
 extern void Scale(VGfloat, VGfloat);
 extern void Text(VGfloat, VGfloat, char *, Fontinfo, int);
+
+extern void TextWrap(VGfloat, VGfloat, char *, int, Fontinfo, int);
+
 extern void TextMid(VGfloat, VGfloat, char *, Fontinfo, int);
 extern void TextEnd(VGfloat, VGfloat, char *, Fontinfo, int);
 extern VGfloat TextWidth(char *, Fontinfo, int);
@@ -17,6 +20,8 @@ extern void Ellipse(VGfloat, VGfloat, VGfloat, VGfloat);
 extern void Circle(VGfloat, VGfloat, VGfloat);
 extern void Arc(VGfloat, VGfloat, VGfloat, VGfloat, VGfloat, VGfloat);
 extern void Image(VGfloat, VGfloat, int, int, char *);
+extern void ImageI(VGfloat, VGfloat, int, int, VGImage);
+
 extern void Start(int, int);
 extern void End();
 extern void SaveEnd(char *);
@@ -37,6 +42,9 @@ extern Fontinfo loadfont(const int *, const int *, const unsigned char *, const 
 			 int);
 extern void unloadfont(VGPath *, int);
 extern void makeimage(VGfloat, VGfloat, int, int, VGubyte *);
+extern VGImage createImageFromJpeg(const char *);
+extern VGImage createImageFromRaw(int, int, char *);
+
 extern void saveterm();
 extern void restoreterm();
 extern void rawterm();
